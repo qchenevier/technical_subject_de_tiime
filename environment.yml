@@ -1,0 +1,27 @@
+name: tiime
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.9
+  - jupyterlab
+  - jupyter_console
+
+  ## Development tools
+  - black
+  - flake8
+  - isort
+  - pytest
+  - colorlog
+
+  ## Data engineering
+  - pandas==1.4.*
+
+  ## I/O
+  - metaflow==2.*.*
+  - tinydb==4.*.*
+
+  ## PIP packages
+  - pip
+    
