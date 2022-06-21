@@ -1,2 +1,4 @@
 .metaflow
 metaflow-tutorials
+__pycache__
+*.db
