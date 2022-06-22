@@ -20,7 +20,7 @@ dependencies:
 
   ## I/O
   - metaflow==2.*.*
-  - tinydb==4.*.*
+  - sqlite-utils==3.*.*
 
   ## PIP packages
   - pip
