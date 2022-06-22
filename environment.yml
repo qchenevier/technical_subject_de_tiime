@@ -21,6 +21,7 @@ dependencies:
   ## I/O
   - metaflow==2.*.*
   - sqlite-utils==3.*.*
+  - twilio==7.*.*
 
   ## PIP packages
   - pip

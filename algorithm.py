@@ -8,6 +8,8 @@ import pandas as pd
 from pathlib import Path
 import sqlite_utils
 
+from sms_api import send_sms
+
 POTENTIAL_TAGS: Tuple[str, ...] = ("TATA", "TOTO", "TUTU", "TAXI")
 CURRENT_DIRECTORY = Path(__file__).parent
 
@@ -51,8 +53,7 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
         """
         Parse the CSV file and load the values into a list of dictionaries.
         """
-        raise Exception("Failure simulation")
-
+        # raise Exception("Failure simulation")
         df_transactions = pd.read_csv(StringIO(self.transaction_file))
         self.transactions = df_transactions.to_dict(orient="records")
         self.next(self.tag_transactions, self.annotate_transactions)
@@ -64,6 +65,7 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
         search for the tags of POTENTIAL_TAGS (global parameter) in the transaction
         returns a list of {transaction_id: tag} pairs
         """
+        # raise Exception("Failure simulation")
         if not self.read_csv_failed:
             self.tags: List[Dict[str, Union[int, Optional[str]]]] = [
                 {
@@ -86,9 +88,12 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
     @step
     def publish_tags(self):
         """Publish tags in SQL database"""
+        # raise Exception("Failure simulation")
         if not self.tag_transactions_failed and not self.read_csv_failed:
             db = sqlite_utils.Database(self.database_filepath)
-            db["tags"].insert_all(self.tags, pk="transaction_id", replace=True)
+            db["tags"].insert_all(
+                self.tags, pk="transaction_id", replace=True
+            )  # pylint: disable=E1101
         self.next(self.join)
 
     @catch(var="annotate_transactions_failed")
@@ -97,6 +102,7 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
         """Annotates the transactions
         Annotates with 4 classes based on the amount of the transaction
         returns a list of {transaction_id: annotation} pairs"""
+        # raise Exception("Failure simulation")
         if not self.read_csv_failed:
             self.annotations: List[Dict[str, Union[int, str]]] = [
                 {
@@ -121,9 +127,10 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
     @step
     def publish_annotations(self):
         """Publish annotations in SQL database"""
+        # raise Exception("Failure simulation")
         if not self.annotate_transactions_failed and not self.read_csv_failed:
             db = sqlite_utils.Database(self.database_filepath)
-            db["annotations"].insert_all(
+            db["annotations"].insert_all(  # pylint: disable=E1101
                 self.annotations, pk="transaction_id", replace=True
             )
         self.next(self.join)
@@ -144,13 +151,15 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
             "annotate_transactions_failed",
             "publish_annotations_failed",
         ]
-        flow_failed = False
+        tasks_failed = []
         for failure in failures:
             if self.__getattr__(failure):
                 print(f"A task failed: {failure}")
-                flow_failed = True
-        if flow_failed:
-            print("Flow failed")
+                tasks_failed.append(failure)
+        if tasks_failed:
+            failure_message = f"Task(s) failed: {', '.join(tasks_failed)}"
+            print(failure_message)
+            send_sms(failure_message)
         print("Finished flow")
 
 
