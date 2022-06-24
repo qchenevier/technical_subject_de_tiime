@@ -91,9 +91,9 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
         # raise Exception("Failure simulation")
         if not self.tag_transactions_failed and not self.read_csv_failed:
             db = sqlite_utils.Database(self.database_filepath)
-            db["tags"].insert_all(
+            db["tags"].insert_all(  # pylint: disable=E1101
                 self.tags, pk="transaction_id", replace=True
-            )  # pylint: disable=E1101
+            )
         self.next(self.join)
 
     @catch(var="annotate_transactions_failed")
@@ -127,7 +127,7 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
     @step
     def publish_annotations(self):
         """Publish annotations in SQL database"""
-        # raise Exception("Failure simulation")
+        raise Exception("Failure simulation")
         if not self.annotate_transactions_failed and not self.read_csv_failed:
             db = sqlite_utils.Database(self.database_filepath)
             db["annotations"].insert_all(  # pylint: disable=E1101
