@@ -1,5 +1,5 @@
 from math import isclose
-from random import random
+from random import random, choice
 from typing import Tuple, List, Dict, Union, Optional
 from io import StringIO
 
@@ -41,10 +41,42 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
         help="The path to a database file.",
         default=str(CURRENT_DIRECTORY / "database.db"),
     )
+    failure_simulation = Parameter(
+        "failure_simulation",
+        help="Boolean to trigger a simulated failure in the pipeline",
+        default=False,
+    )
+    tasks_catching_exceptions = [
+        "read_csv",
+        "tag_transactions",
+        "publish_tags",
+        "annotate_transactions",
+        "publish_annotations",
+    ]
+
+    def simulate_failure(self, task):
+        if task == self.task_to_fail:
+            raise Exception("An exception occured (this is a simulation).")
+
+    def manage_failures(self):
+        tasks_failed = []
+        for task in self.tasks_catching_exceptions:
+            failure = f"{task}_failed"
+            if self.__getattr__(failure):
+                print(f"A task failed: {task}")
+                tasks_failed.append(task)
+        if tasks_failed:
+            failure_message = f"Task(s) failed: {', '.join(tasks_failed)}"
+            print(failure_message)
+            send_sms(failure_message)
 
     @step
     def start(self):
         """Start"""
+        if self.failure_simulation:
+            self.task_to_fail = choice(self.tasks_catching_exceptions)
+        else:
+            self.task_to_fail = None
         self.next(self.read_csv)
 
     @catch(var="read_csv_failed")
@@ -53,7 +85,7 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
         """
         Parse the CSV file and load the values into a list of dictionaries.
         """
-        # raise Exception("Failure simulation")
+        self.simulate_failure(task="read_csv")
         df_transactions = pd.read_csv(StringIO(self.transaction_file))
         self.transactions = df_transactions.to_dict(orient="records")
         self.next(self.tag_transactions, self.annotate_transactions)
@@ -65,7 +97,7 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
         search for the tags of POTENTIAL_TAGS (global parameter) in the transaction
         returns a list of {transaction_id: tag} pairs
         """
-        # raise Exception("Failure simulation")
+        self.simulate_failure(task="tag_transactions")
         if not self.read_csv_failed:
             self.tags: List[Dict[str, Union[int, Optional[str]]]] = [
                 {
@@ -88,7 +120,7 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
     @step
     def publish_tags(self):
         """Publish tags in SQL database"""
-        # raise Exception("Failure simulation")
+        self.simulate_failure(task="publish_tags")
         if not self.tag_transactions_failed and not self.read_csv_failed:
             db = sqlite_utils.Database(self.database_filepath)
             db["tags"].insert_all(  # pylint: disable=E1101
@@ -102,7 +134,7 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
         """Annotates the transactions
         Annotates with 4 classes based on the amount of the transaction
         returns a list of {transaction_id: annotation} pairs"""
-        # raise Exception("Failure simulation")
+        self.simulate_failure(task="annotate_transactions")
         if not self.read_csv_failed:
             self.annotations: List[Dict[str, Union[int, str]]] = [
                 {
@@ -127,7 +159,7 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
     @step
     def publish_annotations(self):
         """Publish annotations in SQL database"""
-        raise Exception("Failure simulation")
+        self.simulate_failure(task="publish_annotations")
         if not self.annotate_transactions_failed and not self.read_csv_failed:
             db = sqlite_utils.Database(self.database_filepath)
             db["annotations"].insert_all(  # pylint: disable=E1101
@@ -144,26 +176,9 @@ class TagAndAnnotateTransactionsFlow(FlowSpec):
     @step
     def end(self):
         """End"""
-        failures = [
-            "read_csv_failed",
-            "tag_transactions_failed",
-            "publish_tags_failed",
-            "annotate_transactions_failed",
-            "publish_annotations_failed",
-        ]
-        tasks_failed = []
-        for failure in failures:
-            if self.__getattr__(failure):
-                print(f"A task failed: {failure}")
-                tasks_failed.append(failure)
-        if tasks_failed:
-            failure_message = f"Task(s) failed: {', '.join(tasks_failed)}"
-            print(failure_message)
-            send_sms(failure_message)
+        self.manage_failures()
         print("Finished flow")
 
 
 if __name__ == "__main__":
     TagAndAnnotateTransactionsFlow()
-
-# TODO: send emails using twilio/sendgrid to redirect to the logs of the failures

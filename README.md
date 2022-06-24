@@ -4,7 +4,7 @@
 
 ### Purpose
 
-A pipeline to enrich transactions with tags & annotations.
+A pipeline to enrich transactions with tags & annotations, stored in a local database, with some basic failure management and an alerting system with SMS.
 
 ### Stack
 
@@ -18,15 +18,15 @@ A pipeline to enrich transactions with tags & annotations.
 ### Conda environment
 
 Install the conda environment using the `environment.yml` file:
-```
-mamba env create -f environment.yml
-```
+  ```
+  mamba env create -f environment.yml
+  ```
 
 An environment called `tiime` is created.
 
-### Twilio configuration (not mandatory)
+### SMS alerting configuration (not mandatory)
 
-To enable SMS alerting in case of pipeline failure, you can specify twilio credentials in the `twilio_config.json` file.
+To enable SMS alerting in case of pipeline failure, you can specify [twilio](https://www.twilio.com/docs/libraries/python) credentials in the `twilio_config.json` file.
 
 Copy the example config file to the right path:
 ```
@@ -41,6 +41,8 @@ Fill in the missing information in the `twilio_config.json` file using your pref
 
 ## Usage
 
+### First usage
+
 Activate the environment (do it once):
 ```
 conda activate tiime
@@ -51,12 +53,26 @@ Show the pipeline doc (not mandatory):
 python algorithm.py show
 ```
 
+Show the pipeline parameters (not mandatory):
+```
+python algorithm.py run --help
+```
+
+### Normal usage
+
 Run the pipeline:
 ```
 python algorithm.py run
 ```
 
 On the 1<sup>st</sup> pipeline run, a database file `database.db` is created in the root folder
+
+### Testing
+
+Simulate a failure in the pipeline to test the SMS alerting feature:
+```
+python algorithm.py run --failure_simulation True
+```
 
 ## Backlog & improvements
 
