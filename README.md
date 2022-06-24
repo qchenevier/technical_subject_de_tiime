@@ -69,6 +69,14 @@ On the 1<sup>st</sup> pipeline run, a database file `database.db` is created in 
 
 ### Testing
 
+Verify that the database contains the expected results:
+```
+sqlite-utils query database.db "select * from tags limit 10"
+sqlite-utils query database.db "select * from annotations limit 10"
+sqlite-utils query database.db "select count(*) from tags"
+sqlite-utils query database.db "select count(*) from annotations"
+```
+
 Simulate a failure in the pipeline to test the SMS alerting feature:
 ```
 python algorithm.py run --failure_simulation True
